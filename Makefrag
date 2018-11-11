@@ -1,0 +1,66 @@
+# check RISCV environment variable
+ifndef RISCV
+$(error Please set environment variable RISCV. Please take a look at README)
+endif
+
+MODEL ?= TestHarness
+PROJECT ?= TYOD_SOC
+CFG_PROJECT ?= TYOD_SOC
+CONFIG ?= MyConfig
+rktchip_dir = $(base_dir)/../rocket-chip
+
+# TODO: For now must match rocketchip.Generator
+long_name = $(PROJECT).$(CONFIG)
+
+VLSI_MEM_GEN ?= $(rktchip_dir)/scripts/vlsi_mem_gen
+
+CXX ?= g++
+CXXFLAGS := -O1
+JVM_MEMORY ?= 2G
+
+SBT ?= java -Xmx$(JVM_MEMORY) -Xss8M -XX:MaxPermSize=256M -jar $(rktchip_dir)/sbt-launch.jar
+SHELL := /bin/bash
+
+ROCKET_CLASSES ?= "$(rktchip_dir)/target/scala-2.11/classes:$(rktchip_dir)/chisel3/target/scala-2.11/*"
+FIRRTL_JAR ?= $(rktchip_dir)/firrtl/utils/bin/firrtl.jar
+FIRRTL ?= java -Xmx$(JVM_MEMORY) -Xss8M -XX:MaxPermSize=256M -cp "$(FIRRTL_JAR)":"$(ROCKET_CLASSES)" firrtl.Driver
+
+# Build firrtl.jar and put it where chisel3 can find it.
+$(FIRRTL_JAR): $(shell find $(rktchip_dir)/firrtl/src/main/scala -iname "*.scala")
+	$(MAKE) -C $(rktchip_dir)/firrtl SBT="$(SBT)" root_dir=$(rktchip_dir)/firrtl build-scala
+	touch $(FIRRTL_JAR)
+	mkdir -p $(rktchip_dir)/lib
+	cp -p $(FIRRTL_JAR) $(rktchip_dir)/lib
+# When chisel3 pr 448 is merged, the following extraneous copy may be removed.
+	mkdir -p $(rktchip_dir)/chisel3/lib
+	cp -p $(FIRRTL_JAR) $(rktchip_dir)/chisel3/lib
+
+src_path := src/main/scala
+resources := $(rktchip_dir)/src/main/resources
+csrc := $(resources)/csrc
+vsrc := $(resources)/vsrc
+default_submodules := . hardfloat chisel3
+chisel_srcs := $(foreach submodule,$(default_submodules) $(ROCKETCHIP_ADDONS),$(shell find $(rktchip_dir)/$(submodule)/$(src_path) -name "*.scala"))
+
+disasm := 2>
+which_disasm := $(shell which spike-dasm 2> /dev/null)
+ifneq ($(which_disasm),)
+	disasm := 3>&1 1>&2 2>&3 | $(which_disasm) $(DISASM_EXTENSION) >
+endif
+
+timeout_cycles = 100000000
+
+bootrom_img = $(rktchip_dir)/bootrom/bootrom.img
+
+#--------------------------------------------------------------------
+# Build Tests
+#--------------------------------------------------------------------
+
+%.hex:
+	$(MAKE) -C $(dir $@) $(notdir $@)
+
+%.riscv.hex: %.riscv
+	$(MAKE) -C $(dir $@) $(notdir $@)
+
+clean-run-output:
+	rm -f $(output_dir)/{*.out,*.run,*.vpd}

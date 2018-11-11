@@ -1,0 +1,4 @@
+[0m[[0m[31merror[0m] [0m[0m/home/prince/TYOD_SOC/src/main/scala/CordicRoCC.scala:312:3: Missing closing brace `}' assumed here[0m
+[0m[[0m[31merror[0m] [0m[0m		}.otherwise{[0m
+[0m[[0m[31merror[0m] [0m[0m		^[0m
+[0m[[0m[31merror[0m] [0m[0mone error found[0m

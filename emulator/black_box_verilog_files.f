@@ -1,0 +1,3 @@
+-v /home/prince/TYOD_SOC/emulator/./AsyncResetReg.v
+-v /home/prince/TYOD_SOC/emulator/./plusarg_reader.v
+-v /home/prince/TYOD_SOC/emulator/./plusarg_reader.v
